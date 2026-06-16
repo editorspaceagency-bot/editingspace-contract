@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EditingSpace — Contract Generator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F3F1EC;--surface:#FFFFFF;--border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.15);
+  --text:#181810;--muted:#6E6E64;--hint:#A3A398;
+  --accent:#1F6F5C;--accent-bg:rgba(31,111,92,0.07);--accent-border:rgba(31,111,92,0.3);
+  --orange:#C25A0C;--orange-bg:rgba(194,90,12,0.07);--orange-border:rgba(194,90,12,0.3);
+  --r:10px;--r-sm:6px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh;padding:48px 20px 80px;}
+.wrap{max-width:520px;margin:0 auto;}
+
+.logo{font-family:monospace;font-size:11px;letter-spacing:0.13em;color:var(--orange);margin-bottom:20px;}
+.logo span{color:var(--hint);}
+h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;}
+.sub{font-size:13px;color:var(--muted);margin-bottom:32px;line-height:1.6;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:28px;margin-bottom:12px;}
+.card-label{font-size:10px;font-family:monospace;letter-spacing:0.13em;color:var(--orange);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.card-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;margin-top:16px;}
+label:first-of-type{margin-top:0;}
+input[type=text],input[type=date]{width:100%;background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--r-sm);color:var(--text);font-size:13px;font-family:inherit;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.tier-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+.tier-opt{border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:12px 8px;cursor:pointer;background:var(--bg);text-align:center;user-select:none;transition:all .15s;}
+.tier-opt:hover{border-color:var(--orange);}
+.tier-opt.on{border-color:var(--orange);background:var(--orange-bg);box-shadow:0 0 0 2px var(--orange-border);}
+.tier-opt.on .to-name{color:var(--orange);}
+.to-name{font-size:9px;font-family:monospace;letter-spacing:0.08em;color:var(--hint);margin-bottom:3px;}
+.to-price{font-size:15px;font-weight:700;}
+.to-vids{font-size:10px;color:var(--muted);margin-top:3px;}
+
+.vids-row{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.vids-row input{width:80px;text-align:center;}
+.vids-row span{font-size:12px;color:var(--muted);}
+
+.gen-btn{width:100%;padding:13px;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--accent);border:none;color:#fff;margin-top:4px;transition:opacity .15s;}
+.gen-btn:hover{opacity:0.88;}
+
+/* Output */
+.output{display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;margin-top:12px;}
+.out-label{font-size:10px;font-family:monospace;letter-spacing:0.13em;color:var(--accent);margin-bottom:12px;}
+.link-box{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:12px 14px;font-size:12px;font-family:monospace;color:var(--text);word-break:break-all;line-height:1.7;margin-bottom:12px;user-select:all;}
+.copy-btn{width:100%;padding:11px;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;background:var(--orange-bg);border:1px solid var(--orange-border);color:var(--orange);transition:background .15s;}
+.copy-btn:hover{background:rgba(194,90,12,0.14);}
+.copy-success{font-size:11px;font-family:monospace;color:var(--accent);margin-top:8px;display:none;text-align:center;}
+.preview-btn{width:100%;padding:10px;border-radius:var(--r-sm);font-size:12px;font-family:inherit;cursor:pointer;background:transparent;border:1px solid var(--border-strong);color:var(--muted);margin-top:8px;transition:background .15s;}
+.preview-btn:hover{background:var(--bg);}
+.note{font-size:11px;color:var(--hint);margin-top:10px;line-height:1.6;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo">EDITINGSPACE <span>/ Private Generator</span></div>
+  <h1>Generate client contract link</h1>
+  <div class="sub">Fill in the details below. You'll get a shareable link — send it to your client and they'll see the contract ready to sign.</div>
+
+  <div class="card">
+    <div class="card-label">Client info</div>
+    <div class="two-col">
+      <div>
+        <label>Client full name</label>
+        <input type="text" id="s-name" placeholder="e.g. Ahmed Hassan">
+      </div>
+      <div>
+        <label>Brand / channel name</label>
+        <input type="text" id="s-brand" placeholder="e.g. Ahmed Invests">
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <label>Start date</label>
+        <input type="text" id="s-start" placeholder="e.g. 1 July 2026">
+      </div>
+      <div>
+        <label>Monthly rate</label>
+        <input type="text" id="s-rate" placeholder="e.g. $3,000 / month">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Service plan</div>
+    <div class="tier-row">
+      <div class="tier-opt" onclick="pickTier('Starter','$2,000','8',this)">
+        <div class="to-name">STARTER</div>
+        <div class="to-price">$2,000</div>
+        <div class="to-vids">8 videos/mo</div>
+      </div>
+      <div class="tier-opt on" onclick="pickTier('Growth','$3,000','16',this)">
+        <div class="to-name">GROWTH</div>
+        <div class="to-price">$3,000</div>
+        <div class="to-vids">16 videos/mo</div>
+      </div>
+      <div class="tier-opt" onclick="pickTier('Authority','$5,000+','Unlimited',this)">
+        <div class="to-name">AUTHORITY</div>
+        <div class="to-price">$5,000+</div>
+        <div class="to-vids">Unlimited</div>
+      </div>
+    </div>
+    <label style="margin-top:16px">Videos per month</label>
+    <div class="vids-row">
+      <input type="text" id="s-videos" value="16">
+      <span>short-form videos / month</span>
+    </div>
+  </div>
+
+  <button class="gen-btn" onclick="generateLink()">Generate client link →</button>
+
+  <div class="output" id="output">
+    <div class="out-label">CLIENT CONTRACT LINK — READY TO SEND</div>
+    <div class="link-box" id="link-box"></div>
+    <button class="copy-btn" onclick="copyLink()">Copy link</button>
+    <div class="copy-success" id="copy-success">✓ Link copied to clipboard</div>
+    <button class="preview-btn" onclick="previewLink()">Preview contract →</button>
+    <div class="note">Send this link via WhatsApp, email, or DM. The client opens it, reads the contract, and signs — no login needed.</div>
+  </div>
+
+</div>
+<script>
+let selectedTier = 'Growth';
+
+function pickTier(name, price, videos, el) {
+  document.querySelectorAll('.tier-opt').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  selectedTier = name;
+  document.getElementById('s-rate').value = price + ' / month';
+  const v = document.getElementById('s-videos');
+  v.value = name === 'Authority' ? 'Unlimited' : videos;
+}
+
+function generateLink() {
+  const name   = document.getElementById('s-name').value.trim();
+  const brand  = document.getElementById('s-brand').value.trim();
+  const start  = document.getElementById('s-start').value.trim();
+  const rate   = document.getElementById('s-rate').value.trim();
+  const videos = document.getElementById('s-videos').value.trim();
+
+  if (!name) { alert('Please enter the client name.'); return; }
+
+  const base = window.location.origin + window.location.pathname.replace('generate.html','');
+  const params = new URLSearchParams({
+    client: name,
+    brand:  brand  || name,
+    tier:   selectedTier,
+    rate:   rate   || '$3,000 / month',
+    start:  start  || 'TBD',
+    videos: videos || '16',
+  });
+
+  const link = base + 'index.html?' + params.toString();
+  document.getElementById('link-box').textContent = link;
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyLink() {
+  const link = document.getElementById('link-box').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const el = document.getElementById('copy-success');
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 2500);
+  });
+}
+
+function previewLink() {
+  const link = document.getElementById('link-box').textContent;
+  window.open(link, '_blank');
+}
+</script>
+</body>
+</html>

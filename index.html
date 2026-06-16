@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EditingSpace — Sign Document</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F3F1EC;--surface:#FFFFFF;--border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.15);
+  --text:#181810;--muted:#6E6E64;--hint:#A3A398;
+  --accent:#1F6F5C;--accent-bg:rgba(31,111,92,0.07);--accent-border:rgba(31,111,92,0.3);
+  --orange:#C25A0C;--orange-bg:rgba(194,90,12,0.07);--orange-border:rgba(194,90,12,0.3);
+  --r:10px;--r-sm:6px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:99;flex-direction:column;gap:12px;}
+.spin{width:28px;height:28px;border:2px solid var(--border-strong);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loading p{font-size:12px;color:var(--hint);font-family:monospace;}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border-strong);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;}
+.tb-left{display:flex;align-items:center;gap:10px;}
+.tb-logo{width:30px;height:30px;border-radius:7px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;font-family:monospace;}
+.tb-title{font-size:13px;font-weight:600;}
+.tb-sub{font-size:11px;color:var(--muted);}
+.tb-status{font-size:11px;font-family:monospace;padding:5px 12px;border-radius:20px;background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border);}
+.tb-status.signed{background:var(--accent);color:#fff;border:none;}
+
+/* LAYOUT */
+.layout{display:flex;max-width:1060px;margin:0 auto;min-height:calc(100vh - 61px);}
+.doc-col{flex:1;padding:40px 32px 100px;min-width:0;}
+@media(max-width:880px){.layout{flex-direction:column;}.doc-col{padding:24px 16px 60px;}}
+
+/* DOC CARD */
+.doc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:40px;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+@media(max-width:560px){.doc-card{padding:22px;}}
+.doc-eyebrow{font-size:10px;font-family:monospace;letter-spacing:0.15em;color:var(--orange);margin-bottom:16px;}
+.doc-title{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:8px;}
+.doc-intro{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:24px;}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:32px;}
+@media(max-width:480px){.meta-grid{grid-template-columns:1fr;}}
+.meta-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;}
+.meta-k{font-size:9px;font-family:monospace;letter-spacing:0.1em;color:var(--hint);margin-bottom:3px;}
+.meta-v{font-size:13px;font-weight:600;}
+
+.ev{color:var(--text);font-weight:600;}
+
+.sec{margin-bottom:32px;}
+.sec-num{font-size:10px;font-family:monospace;letter-spacing:0.13em;color:var(--orange);margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+.sec-num::after{content:'';flex:1;height:1px;background:var(--border);}
+.sec-title{font-size:16px;font-weight:600;margin-bottom:10px;}
+.sec-body{font-size:13px;color:var(--muted);line-height:1.85;}
+.sec-body p{margin-bottom:10px;}
+.sec-body p:last-child{margin-bottom:0;}
+.sec-body strong{color:var(--text);}
+
+.deliv{margin-top:10px;}
+.deliv-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.deliv-item:last-child{border-bottom:none;}
+.deliv-item::before{content:'✓';color:var(--accent);font-weight:700;font-size:11px;flex-shrink:0;padding-top:2px;}
+
+.clause{padding:12px 14px;border-left:3px solid var(--border-strong);margin-bottom:10px;background:var(--bg);border-radius:0 var(--r-sm) var(--r-sm) 0;}
+.clause:last-child{margin-bottom:0;}
+.clause-name{font-size:11px;font-weight:700;font-family:monospace;letter-spacing:0.05em;margin-bottom:5px;}
+.clause-text{font-size:12px;color:var(--muted);line-height:1.75;}
+
+/* SIGN SIDEBAR */
+.sign-col{width:340px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border-strong);padding:28px 24px;position:sticky;top:61px;align-self:flex-start;height:calc(100vh - 61px);overflow-y:auto;}
+@media(max-width:880px){.sign-col{width:100%;position:static;height:auto;border-left:none;border-top:1px solid var(--border-strong);}}
+.sign-step-label{font-size:10px;font-family:monospace;letter-spacing:0.12em;color:var(--orange);margin-bottom:6px;}
+.sign-h{font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em;}
+.sign-p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+.field-label{font-size:11px;color:var(--muted);margin-bottom:6px;margin-top:16px;display:block;}
+.field-label:first-of-type{margin-top:0;}
+input[type=text],input[type=email]{width:100%;background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--r-sm);color:var(--text);font-size:13px;font-family:inherit;padding:10px 12px;outline:none;transition:border-color .15s,box-shadow .15s;}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+.pad-tabs{display:flex;gap:6px;margin-top:16px;margin-bottom:10px;}
+.pad-tab{flex:1;text-align:center;font-size:12px;padding:8px;border-radius:var(--r-sm);border:1px solid var(--border-strong);background:var(--bg);cursor:pointer;color:var(--muted);transition:all .15s;}
+.pad-tab.on{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent);font-weight:600;}
+.pad-area{border:1px solid var(--border-strong);border-radius:var(--r-sm);overflow:hidden;}
+#sig-canvas{display:block;width:100%;height:120px;touch-action:none;cursor:crosshair;background:var(--surface);}
+.pad-type input{font-family:'Georgia',serif;font-style:italic;font-size:26px;border:none!important;background:var(--surface)!important;height:120px;text-align:center;box-shadow:none!important;border-radius:0!important;}
+.pad-clear{font-size:11px;color:var(--hint);cursor:pointer;text-align:right;margin-top:6px;font-family:monospace;}
+.pad-clear:hover{color:var(--muted);}
+.consent{display:flex;gap:8px;align-items:flex-start;margin-top:18px;font-size:11px;color:var(--muted);line-height:1.6;}
+.consent input{width:auto;margin-top:2px;flex-shrink:0;}
+.sign-btn{width:100%;padding:14px;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--accent);border:none;color:#fff;margin-top:18px;transition:opacity .15s;}
+.sign-btn:hover{opacity:0.9;}
+.sign-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* CONFIRM */
+.confirm{display:none;text-align:center;padding:20px 0;}
+.confirm-icon{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+.confirm h3{font-size:18px;font-weight:700;margin-bottom:8px;}
+.confirm p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px;}
+.confirm-cert{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;text-align:left;font-size:11px;color:var(--muted);line-height:1.9;margin-bottom:16px;}
+.confirm-cert b{color:var(--text);font-family:monospace;letter-spacing:0.04em;}
+.dl-btn{width:100%;padding:12px;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;background:var(--text);color:#fff;border:none;}
+
+@media print{
+  .topbar,.sign-col{display:none!important;}
+  .layout{display:block;}
+  .doc-card{box-shadow:none;border:none;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><p>Loading contract...</p></div>
+
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-logo">ES</div>
+    <div>
+      <div class="tb-title">EditingSpace — Client Service Agreement</div>
+      <div class="tb-sub">Please review and sign to continue</div>
+    </div>
+  </div>
+  <div class="tb-status" id="status-pill">Awaiting signature</div>
+</div>
+
+<div class="layout">
+
+  <!-- DOCUMENT -->
+  <div class="doc-col">
+    <div class="doc-card">
+      <div class="doc-eyebrow">EDITINGSPACE · CLIENT SERVICE AGREEMENT</div>
+      <div class="doc-title">Service Agreement</div>
+      <div class="doc-intro">This agreement is between <strong>EditingSpace</strong> (the service provider) and the client named below. Please read all terms carefully before signing.</div>
+
+      <div class="meta-grid">
+        <div class="meta-box"><div class="meta-k">CLIENT</div><div class="meta-v" id="m-client">—</div></div>
+        <div class="meta-box"><div class="meta-k">BRAND</div><div class="meta-v" id="m-brand">—</div></div>
+        <div class="meta-box"><div class="meta-k">PLAN</div><div class="meta-v" id="m-tier">—</div></div>
+        <div class="meta-box"><div class="meta-k">START DATE</div><div class="meta-v" id="m-start">—</div></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-num">SECTION 01</div>
+        <div class="sec-title">Services & deliverables</div>
+        <div class="sec-body"><p>EditingSpace will deliver the following each month under the <span class="ev" id="d-tier">—</span> plan at <span class="ev" id="d-rate">—</span>, beginning <span class="ev" id="d-start">—</span>:</p></div>
+        <div class="deliv">
+          <div class="deliv-item"><span id="d-videos">—</span>&nbsp;short-form videos per month</div>
+          <div class="deliv-item" id="d-revisions">—</div>
+          <div class="deliv-item" id="d-comms">—</div>
+          <div class="deliv-item" id="d-turnaround">—</div>
+          <div class="deliv-item" id="d-report" style="display:none">Monthly performance report</div>
+        </div>
+        <div class="sec-body" style="margin-top:12px"><p>Any request outside these deliverables is out-of-scope, will be quoted separately, and must be confirmed and invoiced in writing before work begins.</p></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-num">SECTION 02</div>
+        <div class="sec-title">Payment terms</div>
+        <div class="sec-body">
+          <p>A deposit of 50% (<span class="ev" id="d-deposit">—</span>) is due before work begins. The remaining balance is due on delivery each month. Work does not start until the deposit is confirmed.</p>
+          <p>Invoices are due within 3 business days. If unpaid after 5 days, work is paused. EditingSpace may terminate this agreement if payment is delayed beyond 14 days.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-num">SECTION 03</div>
+        <div class="sec-title">Revisions & feedback</div>
+        <div class="sec-body">
+          <p>This agreement includes <span class="ev" id="d-revisions2">—</span>. All feedback must be submitted via Frame.io with specific timestamps within 48 hours of delivery. Vague feedback without timestamps does not count as a revision. Extra rounds are billed at $75/hour, invoiced before work begins. No feedback within 48 hours = video approved.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-num">SECTION 04</div>
+        <div class="sec-title">Delivery & communication</div>
+        <div class="sec-body">
+          <p>Videos delivered within <span class="ev" id="d-turnaround2">—</span> of receiving raw footage. Raw footage must arrive by the agreed weekly deadline — late footage resets the turnaround clock. All communication via a dedicated Slack channel.</p>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-num">SECTION 05</div>
+        <div class="sec-title">Terms & conditions</div>
+        <div class="clause"><div class="clause-name">INTELLECTUAL PROPERTY</div><div class="clause-text">Upon full payment, the client owns all delivered files. EditingSpace retains portfolio rights unless the client objects in writing. Raw footage is deleted within 14 days of delivery.</div></div>
+        <div class="clause"><div class="clause-name">CONFIDENTIALITY</div><div class="clause-text">Both parties keep all shared business information, scripts, strategies, and unreleased content strictly confidential indefinitely.</div></div>
+        <div class="clause"><div class="clause-name">CANCELLATION & TERMINATION</div><div class="clause-text">14 days written notice required from either party. Deposits are non-refundable. Completed work is billable pro-rata. EditingSpace may terminate immediately for non-payment, abuse, or chronic late footage.</div></div>
+        <div class="clause"><div class="clause-name">LIMITATION OF LIABILITY</div><div class="clause-text">EditingSpace is not liable for revenue loss, platform performance, or algorithm changes — these are outside its control.</div></div>
+        <div class="clause"><div class="clause-name">CONTENT COMPLIANCE</div><div class="clause-text">The client is responsible for ensuring footage does not infringe copyright or platform terms. No refund for takedowns caused by client-side issues.</div></div>
+        <div class="clause"><div class="clause-name">FORCE MAJEURE</div><div class="clause-text">Neither party is liable for delays beyond reasonable control. Both parties will agree on revised timelines in good faith.</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SIGN SIDEBAR -->
+  <div class="sign-col">
+    <div id="sign-step">
+      <div class="sign-step-label">STEP 1 OF 1</div>
+      <div class="sign-h">Sign this document</div>
+      <div class="sign-p">By signing, you confirm you have read and agree to all terms. Your electronic signature carries the same legal weight as a handwritten signature.</div>
+
+      <label class="field-label">Full legal name</label>
+      <input type="text" id="full-name" placeholder="e.g. Ahmed Hassan">
+      <label class="field-label">Email address</label>
+      <input type="email" id="email" placeholder="e.g. ahmed@email.com">
+
+      <label class="field-label">Your signature</label>
+      <div class="pad-tabs">
+        <div class="pad-tab on" id="tab-draw" onclick="switchPad('draw')">Draw</div>
+        <div class="pad-tab" id="tab-type" onclick="switchPad('type')">Type</div>
+      </div>
+      <div class="pad-area" id="pad-draw"><canvas id="sig-canvas"></canvas></div>
+      <div class="pad-area pad-type" id="pad-type" style="display:none"><input type="text" id="typed-sig" placeholder="Type your name"></div>
+      <div class="pad-clear" onclick="clearPad()">Clear signature</div>
+
+      <label class="consent">
+        <input type="checkbox" id="consent-box" onchange="checkReady()">
+        <span>I have read and agree to all terms of this Client Service Agreement and consent to signing electronically.</span>
+      </label>
+      <button class="sign-btn" id="sign-btn" onclick="signDoc()" disabled>Sign document</button>
+    </div>
+
+    <div class="confirm" id="confirm-step">
+      <div class="confirm-icon">✓</div>
+      <h3>Document signed</h3>
+      <p>Your signature has been recorded. Please download a copy for your records.</p>
+      <div class="confirm-cert">
+        <div><b>SIGNED BY</b><br><span id="cert-name">—</span></div><br>
+        <div><b>EMAIL</b><br><span id="cert-email">—</span></div><br>
+        <div><b>DATE & TIME</b><br><span id="cert-time">—</span></div><br>
+        <div><b>DOCUMENT</b><br>EditingSpace — Client Service Agreement</div>
+      </div>
+      <button class="dl-btn" onclick="window.print()">Download signed copy (PDF)</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const tiers = {
+  Starter:   {revisions:'1 revision round',   comms:'Frame.io feedback only',  turnaround:'48-hour turnaround', report:false},
+  Growth:    {revisions:'2 revision rounds',  comms:'Slack access (9AM–6PM)', turnaround:'24-hour turnaround', report:true},
+  Authority: {revisions:'2 revision rounds',  comms:'Priority Slack access',   turnaround:'24-hour turnaround', report:true},
+};
+
+function loadFromURL() {
+  const p = new URLSearchParams(window.location.search);
+  const name   = p.get('client') || '—';
+  const brand  = p.get('brand')  || '—';
+  const tier   = p.get('tier')   || 'Growth';
+  const rate   = p.get('rate')   || '—';
+  const start  = p.get('start')  || '—';
+  const videos = p.get('videos') || '16';
+  const td     = tiers[tier] || tiers.Growth;
+
+  let deposit = '—';
+  const num = parseInt(rate.replace(/[^0-9]/g,''));
+  if (num) deposit = '$' + (num/2).toLocaleString();
+
+  document.getElementById('m-client').textContent  = name;
+  document.getElementById('m-brand').textContent   = brand;
+  document.getElementById('m-tier').textContent    = tier + ' — ' + rate;
+  document.getElementById('m-start').textContent   = start;
+  document.getElementById('d-tier').textContent    = tier;
+  document.getElementById('d-rate').textContent    = rate;
+  document.getElementById('d-start').textContent   = start;
+  document.getElementById('d-videos').textContent  = videos;
+  document.getElementById('d-deposit').textContent = deposit;
+  document.getElementById('d-revisions').textContent  = td.revisions + ' included';
+  document.getElementById('d-comms').textContent      = td.comms;
+  document.getElementById('d-turnaround').textContent = td.turnaround;
+  document.getElementById('d-revisions2').textContent = td.revisions;
+  document.getElementById('d-turnaround2').textContent= td.turnaround.replace('-hour turnaround','');
+  document.getElementById('d-report').style.display   = td.report ? 'flex' : 'none';
+
+  document.getElementById('loading').style.display = 'none';
+}
+
+window.addEventListener('load', () => { setTimeout(loadFromURL, 400); });
+
+// Signature pad
+const canvas = document.getElementById('sig-canvas');
+const ctx = canvas.getContext('2d');
+let drawing = false, hasDrawing = false;
+
+function resizeCanvas(){
+  const r = window.devicePixelRatio||1, rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width*r; canvas.height = rect.height*r;
+  ctx.scale(r,r); ctx.strokeStyle='#181810'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.lineJoin='round';
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 500);
+
+function pos(e){ const rect=canvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e; return{x:t.clientX-rect.left,y:t.clientY-rect.top}; }
+function start(e){ drawing=true;hasDrawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();checkReady(); }
+function move(e){ if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault(); }
+function end(){ drawing=false; }
+
+canvas.addEventListener('mousedown',start); canvas.addEventListener('mousemove',move);
+canvas.addEventListener('mouseup',end); canvas.addEventListener('mouseleave',end);
+canvas.addEventListener('touchstart',start,{passive:false});
+canvas.addEventListener('touchmove',move,{passive:false});
+canvas.addEventListener('touchend',end);
+
+function clearPad(){ ctx.clearRect(0,0,canvas.width,canvas.height); hasDrawing=false; document.getElementById('typed-sig').value=''; checkReady(); }
+
+let activePad='draw';
+function switchPad(w){
+  activePad=w;
+  document.getElementById('tab-draw').classList.toggle('on',w==='draw');
+  document.getElementById('tab-type').classList.toggle('on',w==='type');
+  document.getElementById('pad-draw').style.display=w==='draw'?'block':'none';
+  document.getElementById('pad-type').style.display=w==='type'?'block':'none';
+  checkReady();
+}
+
+document.getElementById('typed-sig').addEventListener('input',checkReady);
+document.getElementById('full-name').addEventListener('input',checkReady);
+document.getElementById('email').addEventListener('input',checkReady);
+
+function checkReady(){
+  const name=document.getElementById('full-name').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const consent=document.getElementById('consent-box').checked;
+  const sigOk=activePad==='draw'?hasDrawing:document.getElementById('typed-sig').value.trim().length>1;
+  document.getElementById('sign-btn').disabled=!(name&&email&&consent&&sigOk);
+}
+
+function signDoc(){
+  const name=document.getElementById('full-name').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const time=new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('cert-name').textContent=name;
+  document.getElementById('cert-email').textContent=email;
+  document.getElementById('cert-time').textContent=time;
+  document.getElementById('sign-step').style.display='none';
+  document.getElementById('confirm-step').style.display='block';
+  const pill=document.getElementById('status-pill');
+  pill.textContent='✓ Signed'; pill.classList.add('signed');
+}
+</script>
+</body>
+</html>
