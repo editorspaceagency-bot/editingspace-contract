@@ -344,24 +344,24 @@ async function signDoc(){
   btn.textContent = 'Sending...';
   btn.disabled = true;
 
-  // Send to Formspree
+  // Send to Formspree using FormData (works on free plan)
   try {
+    const fd = new FormData();
+    fd.append('_subject',         '✓ Contract Signed — ' + client);
+    fd.append('email',            email);
+    fd.append('Signed_By',        name);
+    fd.append('Signed_At',        time);
+    fd.append('Client_Name',      client);
+    fd.append('Brand',            brand);
+    fd.append('Plan',             tier);
+    fd.append('Rate',             rate);
+    fd.append('Start_Date',       start);
+    fd.append('Videos_Per_Month', videos);
+    fd.append('_gotcha',          '');
     await fetch('https://formspree.io/f/xvznljol', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        _subject:       '✓ Contract Signed — ' + client,
-        signed_by:      name,
-        email:          email,
-        signed_at:      time,
-        client_name:    client,
-        brand:          brand,
-        plan:           tier,
-        rate:           rate,
-        start_date:     start,
-        videos_per_month: videos,
-        message:        name + ' signed the EditingSpace Client Service Agreement on ' + time + '. Plan: ' + tier + ' at ' + rate + '. Start date: ' + start + '.',
-      })
+      headers: { 'Accept': 'application/json' },
+      body: fd
     });
   } catch(e) {
     console.warn('Formspree notification failed:', e);
