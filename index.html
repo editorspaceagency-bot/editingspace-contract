@@ -327,17 +327,55 @@ function checkReady(){
   document.getElementById('sign-btn').disabled=!(name&&email&&consent&&sigOk);
 }
 
-function signDoc(){
-  const name=document.getElementById('full-name').value.trim();
-  const email=document.getElementById('email').value.trim();
-  const time=new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('cert-name').textContent=name;
-  document.getElementById('cert-email').textContent=email;
-  document.getElementById('cert-time').textContent=time;
-  document.getElementById('sign-step').style.display='none';
-  document.getElementById('confirm-step').style.display='block';
-  const pill=document.getElementById('status-pill');
-  pill.textContent='✓ Signed'; pill.classList.add('signed');
+async function signDoc(){
+  const name    = document.getElementById('full-name').value.trim();
+  const email   = document.getElementById('email').value.trim();
+  const time    = new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const p       = new URLSearchParams(window.location.search);
+  const client  = p.get('client') || '—';
+  const brand   = p.get('brand')  || '—';
+  const tier    = p.get('tier')   || '—';
+  const rate    = p.get('rate')   || '—';
+  const start   = p.get('start')  || '—';
+  const videos  = p.get('videos') || '—';
+
+  // Show signing state
+  const btn = document.getElementById('sign-btn');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  // Send to Formspree
+  try {
+    await fetch('https://formspree.io/f/xvznljol', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        _subject:       '✓ Contract Signed — ' + client,
+        signed_by:      name,
+        email:          email,
+        signed_at:      time,
+        client_name:    client,
+        brand:          brand,
+        plan:           tier,
+        rate:           rate,
+        start_date:     start,
+        videos_per_month: videos,
+        message:        name + ' signed the EditingSpace Client Service Agreement on ' + time + '. Plan: ' + tier + ' at ' + rate + '. Start date: ' + start + '.',
+      })
+    });
+  } catch(e) {
+    console.warn('Formspree notification failed:', e);
+  }
+
+  // Show confirmation regardless
+  document.getElementById('cert-name').textContent  = name;
+  document.getElementById('cert-email').textContent = email;
+  document.getElementById('cert-time').textContent  = time;
+  document.getElementById('sign-step').style.display    = 'none';
+  document.getElementById('confirm-step').style.display = 'block';
+  const pill = document.getElementById('status-pill');
+  pill.textContent = '✓ Signed';
+  pill.classList.add('signed');
 }
 </script>
 </body>
