@@ -102,10 +102,21 @@ input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
 .confirm-cert b{color:var(--text);font-family:monospace;letter-spacing:0.04em;}
 .dl-btn{width:100%;padding:12px;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;background:var(--text);color:#fff;border:none;}
 
+/* Signature block shown only in print */
+.sig-print-block{display:none;}
+.sig-print-block img{max-width:220px;height:60px;display:block;margin-top:4px;}
+.sig-print-name{font-family:'Georgia',serif;font-style:italic;font-size:20px;margin-top:4px;}
+.sig-print-line{height:1px;background:#ccc;margin:6px 0 4px;}
+.sig-print-meta{font-size:10px;color:#888;font-family:monospace;}
+
 @media print{
   .topbar,.sign-col{display:none!important;}
   .layout{display:block;}
   .doc-card{box-shadow:none;border:none;}
+  .sig-print-block{display:block!important;margin-top:32px;padding-top:24px;border-top:1px solid #ddd;}
+  .sig-print-title{font-size:10px;font-family:monospace;letter-spacing:0.12em;color:#C25A0C;margin-bottom:12px;}
+  .sig-print-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+  .sig-print-party{font-size:10px;font-family:monospace;color:#888;margin-bottom:6px;}
 }
 </style>
 </head>
@@ -339,16 +350,36 @@ async function signDoc(){
   const start   = p.get('start')  || '—';
   const videos  = p.get('videos') || '—';
 
-  // Show signing state
   const btn = document.getElementById('sign-btn');
-  btn.textContent = 'Sending...';
+  btn.textContent = 'Signing...';
   btn.disabled = true;
 
-  // Send to Formspree using FormData (works on free plan)
+  // ── Capture signature ──
+  let sigDataUrl = '';
+  let sigTyped   = '';
+  if (activePad === 'draw') {
+    sigDataUrl = canvas.toDataURL('image/png');
+    // Embed drawn signature into print block
+    const img = document.getElementById('sig-print-img');
+    img.src = sigDataUrl;
+    img.style.display = 'block';
+  } else {
+    sigTyped = document.getElementById('typed-sig').value.trim();
+    // Embed typed signature into print block
+    const typed = document.getElementById('sig-print-typed');
+    typed.textContent = sigTyped;
+    typed.style.display = 'block';
+  }
+  document.getElementById('sig-print-name-label').textContent = name + ' · ' + email;
+  document.getElementById('sig-print-time-label').textContent = 'Signed: ' + time;
+
+  // ── Send to Formspree (notifies you + sends copy to client) ──
   try {
     const fd = new FormData();
     fd.append('_subject',         '✓ Contract Signed — ' + client);
     fd.append('email',            email);
+    fd.append('_replyto',         email);
+    fd.append('_cc',              'editorspace.agency@gmail.com');
     fd.append('Signed_By',        name);
     fd.append('Signed_At',        time);
     fd.append('Client_Name',      client);
@@ -357,6 +388,7 @@ async function signDoc(){
     fd.append('Rate',             rate);
     fd.append('Start_Date',       start);
     fd.append('Videos_Per_Month', videos);
+    fd.append('Signature_Type',   activePad === 'draw' ? 'Drawn (hand)' : 'Typed: ' + sigTyped);
     fd.append('_gotcha',          '');
     await fetch('https://formspree.io/f/xvznljol', {
       method: 'POST',
@@ -364,13 +396,25 @@ async function signDoc(){
       body: fd
     });
   } catch(e) {
-    console.warn('Formspree notification failed:', e);
+    console.warn('Formspree error:', e);
   }
 
-  // Show confirmation regardless
+  // ── Show confirmation ──
   document.getElementById('cert-name').textContent  = name;
   document.getElementById('cert-email').textContent = email;
   document.getElementById('cert-time').textContent  = time;
+
+  // Show signature in cert block
+  if (sigDataUrl) {
+    const certSig = document.createElement('div');
+    certSig.style.cssText = 'margin:10px 0 4px;';
+    const certImg = document.createElement('img');
+    certImg.src = sigDataUrl;
+    certImg.style.cssText = 'max-width:160px;height:44px;display:block;border-bottom:1px solid #ccc;padding-bottom:4px;';
+    certSig.appendChild(certImg);
+    document.getElementById('confirm-cert').insertBefore(certSig, document.getElementById('confirm-cert').firstChild);
+  }
+
   document.getElementById('sign-step').style.display    = 'none';
   document.getElementById('confirm-step').style.display = 'block';
   const pill = document.getElementById('status-pill');
