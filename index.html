@@ -361,14 +361,12 @@ async function signDoc(){
     sigDataUrl = canvas.toDataURL('image/png');
     // Embed drawn signature into print block
     const img = document.getElementById('sig-print-img');
-    img.src = sigDataUrl;
-    img.style.display = 'block';
+    if (img) { img.src = sigDataUrl; img.style.display = 'block'; }
   } else {
     sigTyped = document.getElementById('typed-sig').value.trim();
     // Embed typed signature into print block
     const typed = document.getElementById('sig-print-typed');
-    typed.textContent = sigTyped;
-    typed.style.display = 'block';
+    if (typed) { typed.textContent = sigTyped; typed.style.display = 'block'; }
   }
   document.getElementById('sig-print-name-label').textContent = name + ' · ' + email;
   document.getElementById('sig-print-time-label').textContent = 'Signed: ' + time;
