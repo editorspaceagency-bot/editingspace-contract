@@ -368,8 +368,10 @@ async function signDoc(){
     const typed = document.getElementById('sig-print-typed');
     if (typed) { typed.textContent = sigTyped; typed.style.display = 'block'; }
   }
-  document.getElementById('sig-print-name-label').textContent = name + ' · ' + email;
-  document.getElementById('sig-print-time-label').textContent = 'Signed: ' + time;
+  const nl = document.getElementById('sig-print-name-label');
+  const tl = document.getElementById('sig-print-time-label');
+  if (nl) nl.textContent = name + ' · ' + email;
+  if (tl) tl.textContent = 'Signed: ' + time;
 
   // ── Send to Formspree (notifies you + sends copy to client) ──
   try {
