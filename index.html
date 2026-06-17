@@ -339,87 +339,71 @@ function checkReady(){
 }
 
 async function signDoc(){
-  const name    = document.getElementById('full-name').value.trim();
-  const email   = document.getElementById('email').value.trim();
-  const time    = new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  const p       = new URLSearchParams(window.location.search);
-  const client  = p.get('client') || '—';
-  const brand   = p.get('brand')  || '—';
-  const tier    = p.get('tier')   || '—';
-  const rate    = p.get('rate')   || '—';
-  const start   = p.get('start')  || '—';
-  const videos  = p.get('videos') || '—';
+  const name   = document.getElementById('full-name').value.trim();
+  const email  = document.getElementById('email').value.trim();
+  const time   = new Date().toLocaleString('en-GB',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const p      = new URLSearchParams(window.location.search);
+  const client = p.get('client')||'—';
+  const brand  = p.get('brand') ||'—';
+  const tier   = p.get('tier')  ||'—';
+  const rate   = p.get('rate')  ||'—';
+  const start  = p.get('start') ||'—';
+  const videos = p.get('videos')||'—';
 
-  const btn = document.getElementById('sign-btn');
-  btn.textContent = 'Signing...';
-  btn.disabled = true;
+  document.getElementById('sign-btn').disabled = true;
 
-  // ── Capture signature ──
-  let sigDataUrl = '';
-  let sigTyped   = '';
-  if (activePad === 'draw') {
+  // Capture signature
+  let sigDataUrl='', sigTyped='';
+  if(activePad==='draw'){
     sigDataUrl = canvas.toDataURL('image/png');
-    // Embed drawn signature into print block
     const img = document.getElementById('sig-print-img');
-    if (img) { img.src = sigDataUrl; img.style.display = 'block'; }
+    if(img){ img.src=sigDataUrl; img.style.display='block'; }
   } else {
     sigTyped = document.getElementById('typed-sig').value.trim();
-    // Embed typed signature into print block
     const typed = document.getElementById('sig-print-typed');
-    if (typed) { typed.textContent = sigTyped; typed.style.display = 'block'; }
+    if(typed){ typed.textContent=sigTyped; typed.style.display='block'; }
   }
-  const nl = document.getElementById('sig-print-name-label');
-  const tl = document.getElementById('sig-print-time-label');
-  if (nl) nl.textContent = name + ' · ' + email;
-  if (tl) tl.textContent = 'Signed: ' + time;
+  const nl=document.getElementById('sig-print-name-label');
+  const tl=document.getElementById('sig-print-time-label');
+  if(nl) nl.textContent = name+' · '+email;
+  if(tl) tl.textContent = 'Signed: '+time;
 
-  // ── Send to Formspree (notifies you + sends copy to client) ──
-  try {
-    const fd = new FormData();
-    fd.append('_subject',         '✓ Contract Signed — ' + client);
-    fd.append('email',            email);
-    fd.append('_replyto',         email);
-    fd.append('_cc',              'editorspace.agency@gmail.com');
-    fd.append('Signed_By',        name);
-    fd.append('Signed_At',        time);
-    fd.append('Client_Name',      client);
-    fd.append('Brand',            brand);
-    fd.append('Plan',             tier);
-    fd.append('Rate',             rate);
-    fd.append('Start_Date',       start);
-    fd.append('Videos_Per_Month', videos);
-    fd.append('Signature_Type',   activePad === 'draw' ? 'Drawn (hand)' : 'Typed: ' + sigTyped);
-    fd.append('_gotcha',          '');
-    await fetch('https://formspree.io/f/xvznljol', {
-      method: 'POST',
-      headers: { 'Accept': 'application/json' },
-      body: fd
-    });
-  } catch(e) {
-    console.warn('Formspree error:', e);
-  }
-
-  // ── Show confirmation ──
+  // Show confirmation IMMEDIATELY — don't wait for Formspree
   document.getElementById('cert-name').textContent  = name;
   document.getElementById('cert-email').textContent = email;
   document.getElementById('cert-time').textContent  = time;
-
-  // Show signature in cert block
-  if (sigDataUrl) {
-    const certSig = document.createElement('div');
-    certSig.style.cssText = 'margin:10px 0 4px;';
-    const certImg = document.createElement('img');
-    certImg.src = sigDataUrl;
-    certImg.style.cssText = 'max-width:160px;height:44px;display:block;border-bottom:1px solid #ccc;padding-bottom:4px;';
-    certSig.appendChild(certImg);
-    document.getElementById('confirm-cert').insertBefore(certSig, document.getElementById('confirm-cert').firstChild);
+  if(sigDataUrl){
+    const d=document.createElement('div'); d.style.cssText='margin:10px 0 4px;';
+    const im=document.createElement('img'); im.src=sigDataUrl;
+    im.style.cssText='max-width:160px;height:44px;display:block;border-bottom:1px solid #ccc;padding-bottom:4px;';
+    d.appendChild(im);
+    const cc=document.getElementById('confirm-cert');
+    if(cc) cc.insertBefore(d,cc.firstChild);
   }
+  document.getElementById('sign-step').style.display='none';
+  document.getElementById('confirm-step').style.display='block';
+  const pill=document.getElementById('status-pill');
+  pill.textContent='✓ Signed'; pill.classList.add('signed');
 
-  document.getElementById('sign-step').style.display    = 'none';
-  document.getElementById('confirm-step').style.display = 'block';
-  const pill = document.getElementById('status-pill');
-  pill.textContent = '✓ Signed';
-  pill.classList.add('signed');
+  // Send to Formspree in background — non-blocking
+  const fd=new FormData();
+  fd.append('_subject',        '✓ Contract Signed — '+client);
+  fd.append('email',           email);
+  fd.append('_replyto',        email);
+  fd.append('_cc',             'editorspace.agency@gmail.com');
+  fd.append('Signed_By',       name);
+  fd.append('Signed_At',       time);
+  fd.append('Client_Name',     client);
+  fd.append('Brand',           brand);
+  fd.append('Plan',            tier);
+  fd.append('Rate',            rate);
+  fd.append('Start_Date',      start);
+  fd.append('Videos_Per_Month',videos);
+  fd.append('Signature_Type',  activePad==='draw'?'Drawn (hand)':'Typed: '+sigTyped);
+  fd.append('_gotcha',         '');
+  fetch('https://formspree.io/f/xvznljol',{
+    method:'POST', headers:{'Accept':'application/json'}, body:fd
+  }).catch(e=>console.warn('Formspree:',e));
 }
 </script>
 </body>
